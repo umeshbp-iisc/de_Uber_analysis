@@ -66,7 +66,8 @@ input_df = input_df.fillna({
 })
 input_df.show()
 
-# Visualization of cleaned data
+######################################### >EDA<  #########################################
+# Step 4 EDA : Visualization of cleaned data
 
 #1 Convert Spark DataFrame to Pandas DataFrame for visualization
 pandas_df = input_df.toPandas()
@@ -81,7 +82,7 @@ plt.ylabel("Count")
 labels = [label.get_text() for label in plt.gca().get_xticklabels()]
 labels = [label.replace(' ', '\n') for label in labels]
 plt.xticks(range(len(labels)), labels, rotation=0)
-plt.show()
+#plt.show()
 
 #2 Time of day trend of bookings
 # Create a new column for hour of the day
@@ -93,7 +94,7 @@ plt.title("Hourly Booking Status Distribution")
 plt.xlabel("Hour of the Day")
 plt.ylabel("Count")
 plt.xticks(rotation=0)
-plt.show()
+#plt.show()
 
 #3 Correlation heatmap of numerical features
 import seaborn as sns
@@ -102,24 +103,77 @@ plt.figure(figsize=(12, 8))
 sns.heatmap(correlation_matrix, annot=True, fmt=".2f", cmap="coolwarm", square=True)
 plt.title("Correlation Heatmap")
 plt.xticks(rotation=45)
-plt.show()
+#plt.show()
 
-#Cancellation Reason Analysis
+#4 Cancellation Reason Analysis by Customer
 
 plt.figure(figsize=(10, 5))
-sns.countplot(data=pandas_df[pandas_df["Cancelled Rides by Customer"] == 1],
-              y="Reason for cancelling by Customer",
+sns.countplot(data=pandas_df[pandas_df["Cancelled Rides by Customer"] == '1'],
+              x="Reason for cancelling by Customer",
               order=pandas_df["Reason for cancelling by Customer"].value_counts().index)
 plt.title("Cancellation Reasons by Customer")
+plt.ylabel("Count")
+plt.xlabel("Reason for Cancelling by Customer")
+#split x-axis labels to 2 lines for better readability
+labels = [label.get_text() for label in plt.gca().get_xticklabels()]
+labels = [label.replace(' ', '\n') for label in labels]
+plt.xticks(range(len(labels)), labels, rotation=0)
 plt.show()
 
 
-#Cancellation statistics by vehicle type
-# vehicle_cancellations = pandas_df[pandas_df["Cancelled Rides by Customer"] == 1]['Vehicle Type'].value_counts()
-# vehicle_cancellations.plot(kind='bar', figsize=(10, 6))
+#5 Cancellation Reason Analysis by Driver
+plt.figure(figsize=(10, 5))
+sns.countplot(data=pandas_df[pandas_df["Cancelled Rides by Driver"] == '1'],
+              x="Driver Cancellation Reason",
+              order=pandas_df["Driver Cancellation Reason"].value_counts().index)
+plt.title("Cancellation Reasons by Driver")
+plt.ylabel("Count")
+plt.xlabel("Reason for Cancelling by Driver")
+#split x-axis labels to 2 lines for better readability
+labels = [label.get_text() for label in plt.gca().get_xticklabels()]
+labels = [label.replace(' ', '\n') for label in labels]
+plt.xticks(range(len(labels)), labels, rotation=0)
+plt.show()
 
-# plt.title("Cancellation Statistics by Vehicle Type")
-# plt.xlabel("Vehicle Type")
-# plt.ylabel("Count")
-# plt.xticks(rotation=45)
-# plt.show()
+#6 Cancellation statistics by vehicle type
+vehicle_cancellations = pandas_df[pandas_df["Cancelled Rides by Customer"] == '1']['Vehicle Type'].value_counts()
+vehicle_cancellations.plot(kind='bar', figsize=(10, 6))
+
+plt.title("Cancellation Statistics by Vehicle Type")
+plt.xlabel("Vehicle Type")
+plt.ylabel("Count")
+#split x-axis labels to 2 lines for better readability
+labels = [label.get_text() for label in plt.gca().get_xticklabels()]
+labels = [label.replace(' ', '\n') for label in labels]
+plt.xticks(range(len(labels)), labels, rotation=45)
+plt.show()
+
+
+# 7. Time-of-Day Booking Trends
+# Convert Date and Time to datetime
+pandas_df["Timestamp"] = pd.to_datetime(pandas_df["Date"].astype(str) + ' ' + pandas_df["Time"].astype(str), errors='coerce')
+pandas_df["Hour"] = pandas_df["Timestamp"].dt.hour
+
+# Define time of day bins
+def time_of_day(hour):
+    if 5 <= hour < 12:
+        return "Morning"
+    elif 12 <= hour < 17:
+        return "Afternoon"
+    elif 17 <= hour < 21:
+        return "Evening"
+    else:
+        return "Night"
+
+pandas_df["Time of Day"] = pandas_df["Hour"].apply(time_of_day)
+plt.figure(figsize=(8, 5))
+sns.countplot(data=pandas_df, x="Time of Day", order=["Morning", "Afternoon", "Evening", "Night"])
+plt.title("Time-of-Day Booking Trends")
+plt.xlabel("Time of Day")
+plt.ylabel("Number of Bookings")
+plt.tight_layout()
+plt.show()
+
+############################################################
+
+#Step 5: Modeling and Evaluation
