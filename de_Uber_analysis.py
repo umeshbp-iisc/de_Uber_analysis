@@ -69,7 +69,7 @@ input_df.show()
 ######################################### >EDA<  #########################################
 # Step 4 EDA : Visualization of cleaned data
 
-#1 Convert Spark DataFrame to Pandas DataFrame for visualization
+# #1 Convert Spark DataFrame to Pandas DataFrame for visualization
 pandas_df = input_df.toPandas()
 
 # plot booking status distribution
@@ -176,4 +176,78 @@ plt.show()
 
 ############################################################
 
-#Step 5: Modeling and Evaluation
+# #Step 5: Modeling and Evaluation
+
+
+# # Create target column
+# input_df = input_df.withColumn("RideCompleted", when(col("Booking Status") == "Completed", 1).otherwise(0))
+
+
+# # Dimension tables
+# dim_customer = input_df.select("Customer ID", "Customer Rating").dropDuplicates()
+# dim_customer.show(5)
+# dim_driver = input_df.select("Driver Ratings").dropDuplicates()
+# dim_driver.show(5)
+# dim_location = input_df.select("Pickup Location", "Drop Location").dropDuplicates()
+# dim_location.show(5)
+# dim_vehicle = input_df.select("Vehicle Type").dropDuplicates()
+# dim_vehicle.show(5)
+
+# # Fact table
+# fact_rides = input_df.select("Booking ID", "Customer ID", "Vehicle Type", "Pickup Location", "Drop Location",
+#                              "Avg VTAT", "Avg CTAT", "Booking Value", "Ride Distance", "Driver Ratings",
+#                              "Customer Rating", "Payment Method", "Timestamp", "RideCompleted")
+
+# fact_rides.show(5)
+
+# #step 6: feature engineering
+# # String Indexing for categorical features
+# indexers = [
+#     StringIndexer(inputCol="Vehicle Type", outputCol="VehicleType_Index"),
+#     StringIndexer(inputCol="Pickup Location", outputCol="PickupLocation_Index"),
+#     StringIndexer(inputCol="Drop Location", outputCol="DropLocation_Index"),
+#     StringIndexer(inputCol="Payment Method", outputCol="PaymentMethod_Index")
+# ]
+
+# # Apply indexers
+# for indexer in indexers:
+#     fact_rides = indexer.fit(fact_rides).transform(fact_rides)
+
+# # Define feature columns
+# feature_cols = ["Avg VTAT", "Avg CTAT", "Booking Value", "Ride Distance", "Driver Ratings", "Customer Rating",
+#                 "VehicleType_Index", "PickupLocation_Index", "DropLocation_Index", "PaymentMethod_Index"]
+
+# # Assemble features into a single vector
+# # Vector Assembler is selected here to combine multiple feature columns into a single feature vector for model training.
+# assembler = VectorAssembler(inputCols=feature_cols, outputCol="features")
+# # Transform fact_rides to include features column and select features and target column
+# df_model = assembler.transform(fact_rides).select("features", "RideCompleted")
+
+# # Step 7: Split data into training and testing sets
+# train_df, test_df = df_model.randomSplit([0.8, 0.2], seed=42)
+
+# # step 8: Model Training
+# #Random Forest Classifier is selected here for its robustness and ability to handle both numerical and categorical features effectively.
+# # Increase maxBins to handle categorical features with many unique values
+# rf_classifier = RandomForestClassifier(labelCol="RideCompleted", featuresCol="features", numTrees=50, maxDepth=10, maxBins=200, seed=42)
+# # Fit the model on training data 
+# rf_model = rf_classifier.fit(train_df)
+
+# # Make predictions on test data
+# predictions = rf_model.transform(test_df)
+
+# # Step 9: Model Evaluation
+# evaluator_accuracy = MulticlassClassificationEvaluator(labelCol="RideCompleted", predictionCol="prediction", metricName="accuracy")
+# accuracy = evaluator_accuracy.evaluate(predictions)
+
+# #step 10  rmse evaluator for regression
+# evaluator_rmse = RegressionEvaluator(labelCol="RideCompleted", predictionCol="prediction", metricName="rmse")
+# rmse = evaluator_rmse.evaluate(predictions)
+
+# print(f"Model Accuracy: {accuracy:.4f}")
+# print(f"Model RMSE: {rmse:.4f}")
+
+# #step 11: Save outputs
+# predictions.select("prediction", "RideCompleted").write.mode("overwrite").option("header", True).csv("uber_ride_predictions.csv")
+
+
